@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Excel File Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            text-align: center;
+            width: 600px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        input[type="button"] {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        input[type="button"]:hover {
+            background-color: #45a049;
+        }
+
+        #progress-bar-container {
+            background-color: #ddd;
+            height: 20px;
+            width: 100%;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        #progress-bar {
+            background-color: #4caf50;
+            height: 100%;
+            width: 0%;
+            border-radius: 5px;
+        }
+
+        #progress-text {
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+    <script>
+        function submitForm() {
+            var form = document.getElementById('upload-form');
+            var progressBar = document.getElementById('progress-bar');
+            var progressText = document.getElementById('progress-text');
+            var resultTable = document.getElementById('result-table');
+            progressBar.style.width = '0%';
+            progressText.innerHTML = '';
+            resultTable.innerHTML = '';
+
+            var formData = new FormData(form);
+            var xhr = new XMLHttpRequest();
+
+            xhr.open('POST', '/', true);
+            xhr.upload.onprogress = function (e) {
+                if (e.lengthComputable) {
+                    var percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                }
+            };
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.data && response.data.length > 0) {
+                        response.data.forEach(function (record) {
+                            var row = resultTable.insertRow();
+                            var streetCell = row.insertCell(0);
+                            var cityCell = row.insertCell(1);
+                            var stateCell = row.insertCell(2);
+                            var telephoneCell = row.insertCell(3);
+                            var nameCell = row.insertCell(4);
+                            var cleanedTelephoneCell = row.insertCell(5);
+                            var modifiedLinkCell = row.insertCell(6);
+
+                            streetCell.innerHTML = record.street;
+                            cityCell.innerHTML = record.city;
+                            stateCell.innerHTML = record.state;
+                            telephoneCell.innerHTML = record.telephone;
+                            nameCell.innerHTML = record.name;
+                            cleanedTelephoneCell.innerHTML = record.cleanedTelephone;
+                            modifiedLinkCell.innerHTML = record.modifiedLink;
+                        });
+                        progressText.innerHTML = '&#10003; Processed';
+                    } else {
+                        progressText.innerHTML = 'No valid data found in the Excel file.';
+                    }
+                    form.reset();
+                } else {
+                    progressText.innerHTML = 'Processing Failed';
+                }
+            };
+
+            xhr.send(formData);
+        }
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            socket.on('update_data', function(data) {
+                var dataList = document.getElementById('data-container');
+                dataList.innerHTML = '';
+
+                if (data.cleaned_telephone1 && data.cleaned_telephone1.length > 0) {
+                    data.cleaned_telephone1.forEach(function(telephone) {
+                        var listItem = document.createElement('li');
+                        listItem.textContent = telephone;
+                        dataList.appendChild(listItem);
+                    });
+                } else {
+                    var listItem = document.createElement('li');
+                    listItem.textContent = 'No data available.';
+                    dataList.appendChild(listItem);
+                }
+        });
+    </script>
+</head>
+<body>
+
+
+    <div class="container">
+        <h1>Upload Excel Sheet</h1>
+        <form id="upload-form" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".xls, .xlsx" required><br><br>
+            <input type="button" value="Process" onclick="submitForm()">
+        </form>
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="progress-text"></div>
+
+        <h2>Processed Data</h2>
+        <table id="result-table">
+            <tr>
+
+                <th>Cleaned Telephone</th>
+                <th>Modified Link</th>
+            </tr>
+            {% if data %}
+            {% for item in data %}
+            <tr>
+
+                <td>{{ item.cleaned_telephone1 }}</td>
+                <td>{{ item.name1 }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="7">No data available.</td>
+            </tr>
+            {% endif %}
+    <a href="/download" class="btn btn-primary">Download Processed Data</a>
+
+        </table>
+    </div>
+</body>
+
+</html>
